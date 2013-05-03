@@ -2,24 +2,37 @@ package threadingTests;
 
 import java.util.Scanner;
 
+/*
+ * Update : Successfully implemented Wait() and Notify() to pause and
+ * resume the child Object.
+ * 
+ * Not sure why, but I cannot implement Wait() and Notify() properly.
+ * 
+ * When the parent calls child.wait(), the parent waits, not the child.
+ * So upon calling wait(), the counter (child) should stop counting and
+ * the UI (parent) should continue asking for input.
+ * 
+ * Unfortunately, the opposite is the case. The parent stops asking for
+ * input and the child will continue counting to infinity.
+ * 
+ */
+
+
 public class ThreadType2 extends Thread {
 	
 	private ThreadType2 nextThread = null;
-	private int value, increment, instance;
+	private int value = 0;
 	private boolean running = true;
-	private boolean pause = false;
-	private boolean displayOn = true;
+	private boolean pause = false;	
+	private  boolean displayOn = true;	// displays every child print
 	
 	// Constructor
-	ThreadType2(int num, int inst) {
-		super("Type2 Thread");
-		instance = inst;
-		System.out.println("instance: " + instance + " created.");
+	ThreadType2(String name) {
+		super(name);
+		System.out.println("Creating instance " + name);
 		
-		value = num;
-		increment = 1;
-		if(instance == 1) {
-			nextThread = new ThreadType2(value, instance + 1);
+		if(name == "parent") {
+			nextThread = new ThreadType2("child");
 		}
 		start();
 	}
@@ -30,30 +43,35 @@ public class ThreadType2 extends Thread {
 			commune();
 		} else { count(); }
 		
-		System.out.println("Exiting instance " + instance);
+		System.out.println("Exiting instance " + currentThread().getName());
 	}
 	
 	public void count() {
 		while(running) {
-			if(!pause) {
-				value+= increment;
-				if(displayOn) {	System.out.println("value = " + value);	}
+			value++;
+			if(displayOn) {	/*System.out.println("value = " + value);*/	}
+		
+			synchronized (this) {
+				try {
+					while(pause) {
+						System.out.println("pausing...");
+						wait();
+					}
+				} catch (InterruptedException e) {
+					System.out.println("InterruptedException");
+				} catch (IllegalMonitorStateException e) {
+					System.out.println("IllegalMonitorStateException");
+				}
 			}
+			
 			try { Thread.sleep(500); } catch (Exception e) { }
 		}
-	}
-	
-	public void killProc() {
-		running = false;
-	}
-	public void pausing(boolean state) {
-		pause = state;
 	}
 	
 	public void commune() {
 		int parsedNumber = 0;
 		while(parsedNumber != 9) {
-			try { Thread.sleep(1000); } catch (Exception e) { }
+			try { Thread.sleep(200); } catch (Exception e) { }
 			
 			nextThread.toggleDisplay(false);
 			parsedNumber = getParsed();
@@ -65,8 +83,16 @@ public class ThreadType2 extends Thread {
 			} else if(parsedNumber == 7) {
 				System.out.println("Resuming counter...");
 				nextThread.pausing(false);
+				synchronized (nextThread) {
+					try {
+						nextThread.notify();
+						System.out.println("Notifying...");
+					} catch (IllegalMonitorStateException e) {
+						System.out.println("IllegalMonitorStateException");
+					}
+				}				
 			} else {
-				System.out.println("Regular output");
+				System.out.println("Count is at: " + nextThread.getValue());
 			}			
 		}
 		
@@ -96,13 +122,26 @@ public class ThreadType2 extends Thread {
 		return number;
 	}
 	
+	public void killProc() {
+		running = false;
+		pause = false;
+		
+		synchronized (this) {
+			try {				
+				notify();
+			} catch (IllegalMonitorStateException e) {
+				System.out.println("IllegalMonitorStateException");
+			}
+		}
+	}
+	
+	public void pausing(boolean state) {
+		pause = state;
+	}
+	
 	public void toggleDisplay(boolean b) {
 		displayOn = b;
 	}
 	
-	// Getters and Setters
-	public void setValue(int x) { value = x; }
-	public void setInc(int x) { increment = x; }
 	public int getValue() { return value; }
-	public int getInc() { return increment; }
 }
