@@ -5,19 +5,7 @@ import java.util.Scanner;
 /*
  * Update : Successfully implemented Wait() and Notify() to pause and
  * resume the child Object.
- * 
- * Not sure why, but I cannot implement Wait() and Notify() properly.
- * 
- * When the parent calls child.wait(), the parent waits, not the child.
- * So upon calling wait(), the counter (child) should stop counting and
- * the UI (parent) should continue asking for input.
- * 
- * Unfortunately, the opposite is the case. The parent stops asking for
- * input and the child will continue counting to infinity.
- * 
  */
-
-
 public class ThreadType2 extends Thread {
 	
 	private ThreadType2 nextThread = null;
